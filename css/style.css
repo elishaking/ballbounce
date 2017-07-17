@@ -58,7 +58,6 @@ body{
     line-height: 1.42857143;
     text-align: center;
     border: 1px solid black;
-    border-radius: 4px;
 }
 
 .btn:hover{

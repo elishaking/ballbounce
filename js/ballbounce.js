@@ -34,16 +34,25 @@ window.addEventListener('keydown', function(event){
 	}
 });
 
+/* Touch Screen devices */
+document.body.addEventListener('touchend', function(event){
+	space = false;
+});
+document.body.addEventListener('touchstart', function(event){
+	space = true;
+});
+
 /* UTILITY Functions */
 function randRangeInt(a, b){
 	return Math.floor(Math.random() * (b - a) + a);
 }
 
+var scale = 1;
 function Mountain(x, y, base, height, dx){
 	this.x = x;
 	this.y = y;
 	this.base = base;
-	this.height = height;
+	this.height = scale*height;
 	this.dx = dx;
 	this.color = colors[randRangeInt(0, 2)];
 
@@ -165,7 +174,7 @@ document.getElementById('play').addEventListener('click', function(){
 		var x = i * mountainSpacing;
 		var y = i % 2 == 0 ? 0 : canvas.height;
 		var base = randRangeInt(100, 200);
-		var height = y == 0 ? randRangeInt(200, 400) : -randRangeInt(200, 500);
+		var height = y == 0 ? randRangeInt(canvas.height/4.75, canvas.height/2.375) : -randRangeInt(canvas.height/4.75, canvas.height/1.9);
 		mountains.push(new Mountain(x, y, base, height, -3));
 	}
 
