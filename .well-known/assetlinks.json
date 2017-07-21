@@ -1,9 +1,0 @@
-[{
-  "relation": ["delegate_permission/common.handle_all_urls"],
-  "target": {
-    "namespace": "android_app",
-    "package_name": "com.apps.king.complex_cal_cen",
-    "sha256_cert_fingerprints":
-    ["01:73:8D:45:57:BA:E1:55:24:28:90:D7:2C:1A:70:9D:EE:99:EE:8B:ED:05:07:EC:DE:BA:D4:00:4D:E1:8C:0E"]
-  }
-}]
