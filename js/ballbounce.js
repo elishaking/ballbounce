@@ -30,7 +30,6 @@ window.addEventListener('keyup', function(event){
 window.addEventListener('keydown', function(event){
 	if (event.keyCode == 32) {
 		space = true;
-		//console.log('space = ' + space);
 	}
 });
 
@@ -43,11 +42,15 @@ document.body.addEventListener('touchstart', function(event){
 });
 
 /* UTILITY Functions */
-function randRangeInt(a, b){
-	return Math.floor(Math.random() * (b - a) + a);
+function randRange(a, b){
+	return Math.random() * (b - a) + a;
 }
 
-var scale = 1;
+function randRangeInt(a, b){
+	return Math.floor(randRange(a, b));
+}
+
+var scale = 1.1;
 function Mountain(x, y, base, height, dx){
 	this.x = x;
 	this.y = y;
@@ -139,6 +142,22 @@ function isCollided(ball, mountain){
 	return false;
 }
 
+function createMountains(offset, nMountains, mountains){
+	for(var i = offset; i < nMountains + offset; i++){
+		var mountainSpacing = randRangeInt(100, 150);
+		var x = i * mountainSpacing;
+		var y = i % 2 == 0 ? 0 : canvas.height;
+		var base = randRangeInt(100, 200);
+		var height = y == 0 ? randRangeInt(canvas.height/4.75, canvas.height/2.375) : -randRangeInt(canvas.height/4.75, canvas.height/1.9);
+		if(mountains){
+			mountains.push(new Mountain(x, y, base, height, -3));
+		} else{
+			var m = new Mountain(x, y, base, height, 0);
+			m.update();
+		}
+	}
+}
+
 function intro(){
 	c.clearRect(0, 0, innerWidth, innerHeight); // clear canvas
 	var info = document.getElementById('Info');
@@ -148,18 +167,16 @@ function intro(){
 		document.getElementById('collision').removeAttribute('style');
 	}
 	canvas.setAttribute('style', 'background: rgba(0, 0, 0, 0.87);');
-	for(var i = 0; i < 40; i++){
-		var mountainSpacing = randRangeInt(100, 150);
-		var x = i * mountainSpacing;
-		var y = i % 2 == 0 ? 0 : canvas.height;
-		var base = randRangeInt(100, 200);
-		var height = y == 0 ? randRangeInt(200, 400) : -randRangeInt(200, 500);
-		var m = new Mountain(x, y, base, height, 0);
-		m.update();
-	}
+	createMountains(0, 40);
 }
 
 intro();
+
+window.addEventListener('resize', function(event){
+	canvas.width = innerWidth;
+	canvas.height = innerHeight;
+	intro();
+});
 
 document.getElementById('play').addEventListener('click', function(){
 	document.getElementById('Info').setAttribute('style', 'display: none;');
@@ -169,16 +186,7 @@ document.getElementById('play').addEventListener('click', function(){
 	var mountains = [];
 	var nMountains = 100;
 	var offset = 5;
-	for(var i = offset; i < nMountains + offset; i++){
-		var mountainSpacing = randRangeInt(100, 150);
-		var x = i * mountainSpacing;
-		var y = i % 2 == 0 ? 0 : canvas.height;
-		var base = randRangeInt(100, 200);
-		var height = y == 0 ? randRangeInt(canvas.height/4.75, canvas.height/2.375) : -randRangeInt(canvas.height/4.75, canvas.height/1.9);
-		mountains.push(new Mountain(x, y, base, height, -3));
-	}
-
-
+	createMountains(offset, nMountains, mountains);
 
 	var ball = new Ball(canvas.width/3, canvas.height/2, 0, 0, 10);
 
