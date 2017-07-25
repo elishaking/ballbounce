@@ -5,6 +5,8 @@ Copyright (c) 2017 elishaking
 */
 
 var canvas = document.querySelector('canvas');
+/*context*/
+var c = canvas.getContext('2d');
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -12,14 +14,14 @@ canvas.height = window.innerHeight;
 var colors = [
 	'#0D0D0D',
 	'#404040',
-	'#D9D9D9',
 	'#A6A6A6',
-	'#737373'
+	'#737373',
+	'#D9D9D9'
 ];
 
-
-/*context*/
-var c = canvas.getContext('2d');
+var scoreDiv = document.getElementById('score-div');
+var scoreSpan = document.getElementById('score');
+var score = 0;
 
 var space = false;
 window.addEventListener('keyup', function(event){
@@ -57,7 +59,7 @@ function Mountain(x, y, base, height, dx){
 	this.base = base;
 	this.height = scale*height;
 	this.dx = dx;
-	this.color = colors[randRangeInt(0, 2)];
+	this.color = colors[randRangeInt(0, 3)];
 
 	this.draw = function(){
 		c.beginPath();
@@ -178,10 +180,16 @@ window.addEventListener('resize', function(event){
 	intro();
 });
 
+/* GAME START */
 document.getElementById('play').addEventListener('click', function(){
 	document.getElementById('Info').setAttribute('style', 'display: none;');
 	c.clearRect(0, 0, innerWidth, innerHeight); // clear canvas
 	canvas.setAttribute('style', 'background: #D9D9D9');
+
+	if(scoreDiv.hasAttribute('style'))
+		scoreDiv.removeAttribute('style');
+	score = 0;
+	scoreSpan.textContent = score;
 
 	var mountains = [];
 	var nMountains = 100;
@@ -208,8 +216,13 @@ document.getElementById('play').addEventListener('click', function(){
 			mountains[i].update();
 		}
 
+		if(frames % 30 == 0){
+			score++;
+			scoreSpan.textContent = score;
+		}
+
 		frames++;
-		if(frames%400 == 0){
+		if(frames % 400 == 0){
 			var delta = 30;
 			for(var i = 0; i < mountains.length; i++){
 				if(mountains[i].x + mountains[i].base + delta < 0){
