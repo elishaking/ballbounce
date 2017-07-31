@@ -24,16 +24,7 @@ var scoreSpan = document.getElementById('score');
 var score = 0;
 
 var space = false;
-window.addEventListener('keyup', function(event){
-	if (event.keyCode == 32) {
-		space = false;
-	}
-});
-window.addEventListener('keydown', function(event){
-	if (event.keyCode == 32) {
-		space = true;
-	}
-});
+var gameStarted = false;
 
 /* Touch Screen devices */
 document.body.addEventListener('touchend', function(event){
@@ -206,6 +197,7 @@ document.getElementById('play').addEventListener('click', function(){
 		for(var i = 0; i < mountains.length; i++){
 			if(isCollided(ball, mountains[i])){
 				cancelAnimationFrame(animation);
+				gameStarted = false;
 				intro();
 				return;
 			}
@@ -234,5 +226,19 @@ document.getElementById('play').addEventListener('click', function(){
 		//console.log(frames);
 	}
 
-	animate();
+});
+
+window.addEventListener('keyup', function(event){
+	if (event.keyCode == 32) {
+		space = false;
+	}
+});
+window.addEventListener('keydown', function(event){
+	if (event.keyCode == 32) {
+		space = true;
+		if(!gameStarted){
+			gameStarted = true;
+			animate();
+		}
+	}
 });
