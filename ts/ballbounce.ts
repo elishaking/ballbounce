@@ -85,8 +85,6 @@ class Circle{
 		this.c.save();
 		this.c.shadowColor = 'white';
 		this.c.shadowBlur = 10;
-        // this.c.shadowOffsetX = 15;
-        // this.c.shadowOffsetY = 15;
 		this.c.fill();
 		this.c.restore();
 	}
@@ -310,7 +308,7 @@ class Mountain extends ObstacleObject{
         this.c.lineTo(x, y);
 		this.c.closePath();
 
-		var gradient = c.createLinearGradient(this.x, this.y + this.height, this.x, this.y);
+		var gradient = c.createLinearGradient(this.x, this.y - this.height, this.x, this.y);
 		gradient.addColorStop(0, 'white');
 		gradient.addColorStop(1, this.color);
 		this.c.fillStyle = gradient;
@@ -345,20 +343,28 @@ class Mountain extends ObstacleObject{
 		}
 	}
 
-	static createMountains(offset: number, nMountains: number, mountains: Mountain[] = null): Mountain[]{
-		var base = randRangeInt(100, 200);
-		var threshold = (canvas.height/4.75 + canvas.height/2.375) / 2;
-		for(var i = offset; i < nMountains + offset; i++){
-			var mountainSpacing = base * 2;//randRangeInt(100, 150);
-			var x = i * mountainSpacing;
-			var y = 0; //i % 2 == 0 ? 0 : canvas.height;
-			var height = -randRangeInt(canvas.height/9.5, canvas.height/2.375); //y == 0 ? -randRangeInt(canvas.height/4.75, canvas.height/2.375) : randRangeInt(canvas.height/4.75, canvas.height/1.9);
+	static createMountains(offset: number, 
+		rangeX: [number, number], rangeY: [number, number],
+		spacingY: number, nMountains: number, mountains: Mountain[] = null): Mountain[]{
+		
+		var x = mountains ? offset : 0, y = 0, 
+		base = randRangeInt(rangeX[0], rangeX[1]), height = 0, 
+		spacingX = base + randRangeInt(-50, 50);
+
+		for(var i = 0; i < nMountains; i++){
+			// BOTTOM
+			y = canvas.height;
+			height = randRangeInt(rangeY[0], rangeY[1]); //randRangeInt(canvas.height/4.5, canvas.height/1.5)
 			Mountain.addMountain(x, y, base, height, false, mountains);
 
-			y = canvas.height;
-			height = height > threshold ? randRangeInt(canvas.height/9.5, canvas.height/4.75) : randRangeInt(canvas.height/4.75, canvas.height/2.375);
+			// TOP
+			y = 0;
+			height = -(canvas.height - height - spacingY);
 			Mountain.addMountain(x, y, base, height, false, mountains);
-			base = randRangeInt(100, 200);
+
+			x += spacingX;
+			base = randRangeInt(rangeX[0], rangeX[1]); //randRangeInt(100, 200);
+			spacingX = base + randRangeInt(-50, 50);
 		}
 
 		return mountains;
@@ -480,7 +486,7 @@ function intro(): void{
 		document.getElementById('status').removeAttribute('style');
 	}
 	canvas.setAttribute('style', 'background: rgba(0, 0, 0, 0.87);');
-	Mountain.createMountains(0, 40);
+	Mountain.createMountains(0, [100, 200], [canvas.height/4.5, canvas.height/1.5], canvas.height/2, 40);
 }
 
 intro();
@@ -498,16 +504,16 @@ document.getElementById('play').addEventListener('click', function(){
 	scoreSpan.textContent = String(score);
 
 	var obstacleObjects = [];
-	var nObjects = 5;
-	var offset = 5;
+	var nObjects = 10;
+	var offset = canvas.width/2;
 	var endObjects = [];
 	var stars: Circle[] = [];
 	if(LEVEL == 1){
-		Mountain.createMountains(offset, nObjects, obstacleObjects);
+		Mountain.createMountains(offset, [100, 200], [canvas.height/4.5, canvas.height/1.5], canvas.height/2, nObjects, obstacleObjects);
 		var lastMountain: Mountain = obstacleObjects[nObjects*2 - 1];
 		var endX = lastMountain.x + canvas.width/5, endHeight = canvas.height/2.5, endBase = canvas.width/10;
-		endObjects[0] = new Mountain(c, endX, 0, endBase, endHeight, -3, true);
-		endObjects[1] = new Mountain(c, endX, canvas.height, endBase, -endHeight, -3, true);
+		endObjects[0] = new Mountain(c, endX, 0, endBase, -endHeight, -3, false, true);
+		endObjects[1] = new Mountain(c, endX, canvas.height, endBase, endHeight, -3, false, true);
 		Circle.drawCircles(100, stars);
 	} else if(LEVEL == 2){
 		Tower.createTowers(offset, nObjects, obstacleObjects);
@@ -519,8 +525,8 @@ document.getElementById('play').addEventListener('click', function(){
 		Mountain.createGrowingMountains(offset, nObjects, obstacleObjects);
 		var lastMountain: Mountain = obstacleObjects[nObjects*2 - 1];
 		var endX = lastMountain.x + canvas.width/5, endHeight = canvas.height/2.5, endBase = canvas.width/10;
-		endObjects[0] = new Mountain(c, endX, 0, endBase, endHeight, -3, true);
-		endObjects[1] = new Mountain(c, endX, canvas.height, endBase, -endHeight, -3, true);
+		endObjects[0] = new Mountain(c, endX, 0, endBase, -endHeight, -3, true);
+		endObjects[1] = new Mountain(c, endX, canvas.height, endBase, endHeight, -3, true);
 	}
 
 	var ball = new Ball(c, canvas.width/3, canvas.height/2, 0, 0, 10);
