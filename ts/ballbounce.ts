@@ -152,19 +152,95 @@ class Ball{
 		this.y += this.dy;
 	}
     
-    isCollided(mountain: Mountain): boolean{
-        if((this.x + this.radius) > mountain.x && (this.x + this.radius) < (mountain.x + mountain.base)){
-            if(mountain.height < 0){
-                //console.log(mountain.checkY(ball.x + ball.radius));
-                return (this.y + this.radius) > innerHeight - mountain.checkY(this.x + this.radius) && (this.y + this.radius) < mountain.y;
-            } else {
-                //console.log(mountain.checkY(ball.x + ball.radius));
-                return (this.y + this.radius) < mountain.checkY(this.x + this.radius) && (this.y + this.radius) > mountain.y;
+    pointCircleCollide(point, circle, r): boolean{
+        if (r===0) return false;
+        var dx = circle[0] - point[0];
+        var dy = circle[1] - point[1];
+        return dx * dx + dy * dy <= r * r;
+    }
+
+    lineCircleCollide(a, b, circle, radius, nearest=null): boolean{
+        var tmp = [0, 0];
+        //check to see if start or end points lie within circle 
+        if (this.pointCircleCollide(a, circle, radius)) {
+            if (nearest) {
+                nearest[0] = a[0];
+                nearest[1] = a[1];
             }
+            return true
+        } if (this.pointCircleCollide(b, circle, radius)) {
+            if (nearest) {
+                nearest[0] = b[0];
+                nearest[1] = b[1];
+            }
+            return true
         }
-        if(this.y + this.radius > canvas.height || this.y - this.radius < 0){
+        
+        var x1 = a[0], y1 = a[1], x2 = b[0], y2 = b[1];
+        var cx = circle[0], cy = circle[1];
+
+        //vector d
+        var dx = x2 - x1;
+        var dy = y2 - y1;
+        
+        //vector lc
+        var lcx = cx - x1;
+        var lcy = cy - y1;
+        
+        //project lc onto d, resulting in vector p
+        var dLen2 = dx * dx + dy * dy; //len2 of d
+        var px = dx;
+        var py = dy;
+        if (dLen2 > 0) {
+            var dp = (lcx * dx + lcy * dy) / dLen2;
+            px *= dp;
+            py *= dp;
+        }
+        
+        if (!nearest)
+            nearest = tmp;
+        nearest[0] = x1 + px;
+        nearest[1] = y1 + py;
+        
+        //len2 of p
+        var pLen2 = px * px + py * py;
+        
+        //check collision
+        return this.pointCircleCollide(nearest, circle, radius)
+                && pLen2 <= dLen2 && (px * dx + py * dy) >= 0;
+    }
+
+    pointInTriangle(point, triangle): boolean {
+        //compute vectors & dot products
+        var cx = point[0], cy = point[1],
+            t0 = triangle[0], t1 = triangle[1], t2 = triangle[2],
+            v0x = t2[0]-t0[0], v0y = t2[1]-t0[1],
+            v1x = t1[0]-t0[0], v1y = t1[1]-t0[1],
+            v2x = cx-t0[0], v2y = cy-t0[1],
+            dot00 = v0x*v0x + v0y*v0y,
+            dot01 = v0x*v1x + v0y*v1y,
+            dot02 = v0x*v2x + v0y*v2y,
+            dot11 = v1x*v1x + v1y*v1y,
+            dot12 = v1x*v2x + v1y*v2y
+
+        // Compute barycentric coordinates
+        var b = (dot00 * dot11 - dot01 * dot01),
+            inv = b === 0 ? 0 : (1 / b),
+            u = (dot11*dot02 - dot01*dot12) * inv,
+            v = (dot00*dot12 - dot01*dot02) * inv
+        return u>=0 && v>=0 && (u+v < 1)
+    }
+
+    isCollided(mountain: Mountain): boolean{
+        var circle = [this.x, this.y], triangle = mountain.getTriCoord(), radius = this.radius;
+        if (this.pointInTriangle(circle, triangle))
             return true;
-        }
+        if (this.lineCircleCollide(triangle[0], triangle[1], circle, radius))
+            return true;
+        if (this.lineCircleCollide(triangle[1], triangle[2], circle, radius))
+            return true;
+        if (this.lineCircleCollide(triangle[2], triangle[0], circle, radius))
+            return true;
         return false;
     }
 }
@@ -225,21 +301,15 @@ class Mountain extends ObstacleObject{
     }
 
 	draw(): void{
-		// this.c.beginPath();
-		// this.c.moveTo(this.x, this.y);
-		// this.c.lineTo(this.x + this.base/2, this.y + this.height);
-		// this.c.lineTo(this.x + this.base, this.y);
-		// this.c.closePath();
-		// this.c.fillStyle = this.color;
-		// this.c.fill();
 		this.c.beginPath();
         var x = this.x - this.base/2, y = this.y;
         this.c.moveTo(x, y);
-        x += this.base/2, y += this.height;
-        this.c.lineTo(x, y);
         x += this.base/2, y -= this.height;
         this.c.lineTo(x, y);
+        x += this.base/2, y += this.height;
+        this.c.lineTo(x, y);
 		this.c.closePath();
+
 		var gradient = c.createLinearGradient(this.x, this.y + this.height, this.x, this.y);
 		gradient.addColorStop(0, 'white');
 		gradient.addColorStop(1, this.color);
@@ -259,17 +329,12 @@ class Mountain extends ObstacleObject{
 		this.x += this.dx;
 	}
 
-	checkY(ballX): number{
-		var h = Math.abs(this.height);
-		var m = h/(this.base/2);
-		if(ballX < (this.x + this.base/2)){
-			ballX -= this.x;
-			return m*ballX;
-		} else{
-			ballX -= this.x + this.base/2;
-			return (h - m*ballX);
-		}
-	}
+	getTriCoord(){
+        var v1 = [this.x - this.base/2, this.y];
+        var v2 = [this.x, this.y - this.height];
+        var v3 = [this.x + this.base/2, this.y];
+        return [v1, v2, v3];
+    }
 
 	static addMountain(x: number, y: number, base: number, height: number, grow: boolean, mountains: Mountain[] = null){
 		if(mountains){
@@ -287,11 +352,11 @@ class Mountain extends ObstacleObject{
 			var mountainSpacing = base * 2;//randRangeInt(100, 150);
 			var x = i * mountainSpacing;
 			var y = 0; //i % 2 == 0 ? 0 : canvas.height;
-			var height = randRangeInt(canvas.height/9.5, canvas.height/2.375); //y == 0 ? randRangeInt(canvas.height/4.75, canvas.height/2.375) : -randRangeInt(canvas.height/4.75, canvas.height/1.9);
+			var height = -randRangeInt(canvas.height/9.5, canvas.height/2.375); //y == 0 ? -randRangeInt(canvas.height/4.75, canvas.height/2.375) : randRangeInt(canvas.height/4.75, canvas.height/1.9);
 			Mountain.addMountain(x, y, base, height, false, mountains);
 
 			y = canvas.height;
-			height = height > threshold ? -randRangeInt(canvas.height/9.5, canvas.height/4.75) : -randRangeInt(canvas.height/4.75, canvas.height/2.375);
+			height = height > threshold ? randRangeInt(canvas.height/9.5, canvas.height/4.75) : randRangeInt(canvas.height/4.75, canvas.height/2.375);
 			Mountain.addMountain(x, y, base, height, false, mountains);
 			base = randRangeInt(100, 200);
 		}
@@ -305,11 +370,11 @@ class Mountain extends ObstacleObject{
 		var mountainDist = canvas.height/10;
 		for(var i = offset; i < nMountains + offset; i++){
 			var y = 0; 
-			var height = randRangeInt(canvas.height/1.5, canvas.height/2.5);
+			var height = -randRangeInt(canvas.height/1.5, canvas.height/2.5);
 			Mountain.addMountain(x, y, base, height, true, mountains);
 
 			y = canvas.height;
-			height = -(canvas.height - height - mountainDist);
+			height = canvas.height - height - mountainDist;
 			Mountain.addMountain(x, y, base, height, true, mountains);
 			base = randRangeInt(100, 170);
 
