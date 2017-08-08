@@ -105,23 +105,46 @@ class Circle{
 
 }
 
+class Polygon{
+
+	x: number; 
+	y: number; 
+	sideLength: number; 
+	nSides: number;
+
+	constructor(private c: CanvasRenderingContext2D, x: number, y: number, sideLength: number, nSides: number){
+		this.x = x;
+		this.y = y;
+		this.sideLength = sideLength;
+		this.nSides = nSides;
+	}
+
+	draw(){
+		this.c.beginPath();
+		this.c.moveTo(this.x, this.y);
+	}
+}
+
 class Ball{
 
 	static g: number = 0.5;
 	static gravity: number;
 
+	x: number;
+	y: number;
+	radius: number;
+
     color: string;
 
     constructor(private c : CanvasRenderingContext2D, 
-        private x: number, private y: number, 
+        x: number, y: number, 
         private dx: number, private dy: number, 
-        private radius: number){
+        radius: number){
 		
-        this.color = 'black';
-	}
-
-	getX(){
-		return this.x;
+		this.x = x;
+		this.y = y;
+		this.radius = radius;
+        this.color = '#D9D9D9S';
 	}
 
 	draw(): void{
@@ -149,8 +172,102 @@ class Ball{
 		this.x += this.dx;
 		this.y += this.dy;
 	}
+}
+
+class ObstacleObject{
+	draw(){
+
+	}
+
+	update(){
+
+	}
+
+	// createObstacleObjects(): ObstacleObject[]{
+	// 	var nObjects = 100;
+	// 	var offset = 5;
+	// 	if(LEVEL == 1){
+	// 		return Mountain.createMountains(offset, nObjects, []);
+	// 	} else if(LEVEL == 2){
+	// 		return Tower.createTowers(offset, nObjects, []);
+	// 	}
+	// }
+}
+
+class Mountain extends ObstacleObject{
+
+	static scale: number = 1.1;
+	
+    x: number;
+    y: number;
+    base: number;
+	height: number;
+	heightInitial: number;
+
+	color: string;
+
+	grow: boolean;
+	growthRate: number;
     
-    pointCircleCollide(point, circle, r): boolean{
+    constructor(private c: CanvasRenderingContext2D,
+         x: number, y: number, 
+         base: number, height: number, 
+		 private dx: number, 
+		 grow: boolean = false,
+		 private isEnd: boolean = false){
+
+		super();
+
+		this.x = x;
+		this.y = y;
+		this.base = base;
+		this.height = Mountain.scale*height;
+		this.heightInitial = this.height;
+
+		this.grow = grow;
+		this.growthRate = Math.sign(this.height);
+
+        this.color = colors[randRangeInt(0, 3)];
+    }
+
+	draw(): void{
+		this.c.beginPath();
+        var x = this.x - this.base/2, y = this.y;
+        this.c.moveTo(x, y);
+        x += this.base/2, y -= this.height;
+        this.c.lineTo(x, y);
+        x += this.base/2, y += this.height;
+        this.c.lineTo(x, y);
+		this.c.closePath();
+
+		var gradient = c.createLinearGradient(this.x, this.y - this.height, this.x, this.y);
+		gradient.addColorStop(0, 'white');
+		gradient.addColorStop(1, this.color);
+		this.c.fillStyle = gradient;
+		this.c.fill();
+	}
+
+	update(): void{
+		this.draw();
+		
+		if(!this.isEnd && this.grow){
+			if(Math.abs(this.height) >= Math.abs(this.heightInitial*1.3) || Math.abs(this.height) <= Math.abs(this.heightInitial/3)){
+				this.growthRate *= -1;
+			}
+			this.height += this.growthRate;
+		}
+
+		this.x += this.dx;
+	}
+
+	getTriCoord(){
+        var v1 = [this.x - this.base/2, this.y];
+        var v2 = [this.x, this.y - this.height];
+        var v3 = [this.x + this.base/2, this.y];
+        return [v1, v2, v3];
+	}
+	
+	pointCircleCollide(point, circle, r): boolean{
         if (r===0) return false;
         var dx = circle[0] - point[0];
         var dy = circle[1] - point[1];
@@ -229,8 +346,9 @@ class Ball{
         return u>=0 && v>=0 && (u+v < 1)
     }
 
-    isCollided(mountain: Mountain): boolean{
-        var circle = [this.x, this.y], triangle = mountain.getTriCoord(), radius = this.radius;
+    isCollided(ball: Ball): boolean{
+		var circle = [ball.x, ball.y], radius = ball.radius, triangle = this.getTriCoord();
+
         if (this.pointInTriangle(circle, triangle))
             return true;
         if (this.lineCircleCollide(triangle[0], triangle[1], circle, radius))
@@ -241,100 +359,8 @@ class Ball{
             return true;
         return false;
     }
-}
 
-class ObstacleObject{
-	draw(){
-
-	}
-
-	update(){
-
-	}
-
-	createObstacleObjects(): ObstacleObject[]{
-		var nObjects = 100;
-		var offset = 5;
-		if(LEVEL == 1){
-			return Mountain.createMountains(offset, nObjects, []);
-		} else if(LEVEL == 2){
-			return Tower.createTowers(offset, nObjects, []);
-		}
-	}
-}
-
-class Mountain extends ObstacleObject{
-
-	static scale: number = 1.1;
-
-    color: string;
-    x: number;
-    y: number;
-    base: number;
-	height: number;
-	heightInitial: number;
-
-	grow: boolean;
-	growthRate: number;
-    
-    constructor(private c: CanvasRenderingContext2D,
-         x: number, y: number, 
-         base: number, height: number, 
-		 private dx: number, 
-		 grow: boolean = false,
-		 private isEnd: boolean = false){
-
-		super();
-
-		this.x = x;
-		this.y = y;
-		this.base = base;
-		this.height = Mountain.scale*height;
-		this.heightInitial = this.height;
-
-		this.grow = grow;
-		this.growthRate = Math.sign(this.height);
-
-        this.color = colors[randRangeInt(0, 3)];
-    }
-
-	draw(): void{
-		this.c.beginPath();
-        var x = this.x - this.base/2, y = this.y;
-        this.c.moveTo(x, y);
-        x += this.base/2, y -= this.height;
-        this.c.lineTo(x, y);
-        x += this.base/2, y += this.height;
-        this.c.lineTo(x, y);
-		this.c.closePath();
-
-		var gradient = c.createLinearGradient(this.x, this.y - this.height, this.x, this.y);
-		gradient.addColorStop(0, 'white');
-		gradient.addColorStop(1, this.color);
-		this.c.fillStyle = gradient;
-		this.c.fill();
-	}
-
-	update(): void{
-		this.draw();
-		if(!this.isEnd && this.grow){
-			if(Math.abs(this.height) >= Math.abs(this.heightInitial*1.3) || Math.abs(this.height) <= Math.abs(this.heightInitial/3)){
-				this.growthRate *= -1;
-			}
-			this.height += this.growthRate;
-		}
-
-		this.x += this.dx;
-	}
-
-	getTriCoord(){
-        var v1 = [this.x - this.base/2, this.y];
-        var v2 = [this.x, this.y - this.height];
-        var v3 = [this.x + this.base/2, this.y];
-        return [v1, v2, v3];
-    }
-
-	static addMountain(x: number, y: number, base: number, height: number, grow: boolean, mountains: Mountain[] = null){
+	static addMountain(x: number, y: number, base: number, height: number, mountains: Mountain[] = null, grow: boolean = false){
 		if(mountains){
 			mountains.push(new Mountain(c, x, y, base, height, -3, grow));
 		} else{
@@ -345,7 +371,8 @@ class Mountain extends ObstacleObject{
 
 	static createMountains(offset: number, 
 		rangeX: [number, number], rangeY: [number, number],
-		spacingY: number, nMountains: number, mountains: Mountain[] = null): Mountain[]{
+		spacingY: number, nMountains: number, 
+		mountains: Mountain[] = null, grow:boolean = false): Mountain[]{
 		
 		var x = mountains ? offset : 0, y = 0, 
 		base = randRangeInt(rangeX[0], rangeX[1]), height = 0, 
@@ -354,38 +381,17 @@ class Mountain extends ObstacleObject{
 		for(var i = 0; i < nMountains; i++){
 			// BOTTOM
 			y = canvas.height;
-			height = randRangeInt(rangeY[0], rangeY[1]); //randRangeInt(canvas.height/4.5, canvas.height/1.5)
-			Mountain.addMountain(x, y, base, height, false, mountains);
+			height = randRangeInt(rangeY[0], rangeY[1]);
+			Mountain.addMountain(x, y, base, height, mountains, grow);
 
 			// TOP
 			y = 0;
 			height = -(canvas.height - height - spacingY);
-			Mountain.addMountain(x, y, base, height, false, mountains);
+			Mountain.addMountain(x, y, base, height, mountains, grow);
 
 			x += spacingX;
-			base = randRangeInt(rangeX[0], rangeX[1]); //randRangeInt(100, 200);
+			base = randRangeInt(rangeX[0], rangeX[1]);
 			spacingX = base + randRangeInt(-50, 50);
-		}
-
-		return mountains;
-	}
-
-	static createGrowingMountains(offset: number, nMountains: number, mountains: Mountain[] = null): Mountain[]{
-		var x = canvas.width/2;
-		var base = randRangeInt(100, 170);
-		var mountainDist = canvas.height/10;
-		for(var i = offset; i < nMountains + offset; i++){
-			var y = 0; 
-			var height = -randRangeInt(canvas.height/1.5, canvas.height/2.5);
-			Mountain.addMountain(x, y, base, height, true, mountains);
-
-			y = canvas.height;
-			height = canvas.height - height - mountainDist;
-			Mountain.addMountain(x, y, base, height, true, mountains);
-			base = randRangeInt(100, 170);
-
-			var towerSpacing = base + canvas.width/4;
-			x += towerSpacing;
 		}
 
 		return mountains;
@@ -394,22 +400,36 @@ class Mountain extends ObstacleObject{
 
 class Tower extends ObstacleObject{
 
+	static scale: number = 1.1;
+
 	x: number;
 	y: number;
 	width: number;
 	height: number;
+	heightInitial: number;
+
 	color: string;
+
+	grow: boolean;
+	growthRate: number;
 
 	constructor(private c: CanvasRenderingContext2D,
 		x: number, y: number,
 		width: number, height: number, 
-		private dx: number, private isEnd: boolean = false){
+		private dx: number, 
+		grow: boolean = false,
+		private isEnd: boolean = false){
+		
 		super();
+
 		this.x = x;
 		this.y = y;
 		this.width = width;
-		this.height = height;
+		this.height = -Tower.scale * height;
+		this.heightInitial = this.height;
 		this.color = colors[randRangeInt(0, 3)];
+
+		this.grow = grow;
 	}
 
 	draw(){
@@ -420,34 +440,55 @@ class Tower extends ObstacleObject{
 	update(){
 		this.draw();
 
+		if(!this.isEnd && this.grow){
+			if(Math.abs(this.height) >= Math.abs(this.heightInitial*1.3) || Math.abs(this.height) <= Math.abs(this.heightInitial/3)){
+				this.growthRate *= -1;
+			}
+			this.height += this.growthRate;
+		}
+
 		this.x += this.dx;
 	}
 
-	static addTower(x, y, width, height, towers: Tower[] = null){
+	isCollided(ball: Ball): boolean{
+		if(ball.x > this.x && ball.x < this.x + this.width){
+			if(this.height < 0 && ball.y > this.y + this.height || this.height > 0 && ball.y < this.y + this.height){
+				return true;
+			}
+		}
+		return false;
+	}
+
+	static addTower(x, y, width, height, towers: Tower[] = null, grow = false){
 		if(towers){
-			towers.push(new Tower(c, x, y, width, height, -3));
+			towers.push(new Tower(c, x, y, width, height, -3, grow));
 		} else{
 			var m = new Tower(c, x, y, width, height, 0);
 			m.update();
 		}
 	}
 
-	static createTowers(offset: number, nTowers: number, towers: Tower[] = null): Tower[]{
-		var x = canvas.width/2;
-		var width = randRangeInt(50, 70);
-		var towerDist = canvas.height/10;
-		for(var i = offset; i < nTowers + offset; i++){
-			var y = 0; 
-			var height = randRangeInt(canvas.height/1.5, canvas.height/2.5);
-			Tower.addTower(x, y, width, height, towers);
+	static createTowers(offset: number, 
+		rangeX: [number, number], rangeY: [number, number],
+		spacingX: number, spacingY: number, 
+		nTowers: number, towers: Tower[] = null, grow: boolean = false): Tower[]{
+		
+		var x = towers ? offset : 0, y = 0, 
+		width = randRangeInt(rangeX[0], rangeX[1]), height = 0;
 
+		for(var i = 0; i < nTowers; i++){
+			// BOTTOM
 			y = canvas.height;
-			height = -(canvas.height - height - towerDist);
-			Tower.addTower(x, y, width, height, towers);
-			width = randRangeInt(50, 70);
+			height = randRangeInt(rangeY[0], rangeY[1]);
+			Tower.addTower(x, y, width, height, towers, grow);
 
-			var towerSpacing = width + canvas.width/4;//randRangeInt(100, 150);
-			x += towerSpacing;
+			// TOP
+			y = 0;
+			height = -(canvas.height - height - spacingY);
+			Tower.addTower(x, y, width, height < 0 ? height : 0, towers, grow);
+
+			x += spacingX;
+			width = randRangeInt(rangeX[0], rangeX[1]);
 		}
 
 		return towers;
@@ -476,8 +517,10 @@ function intro(): void{
 		document.getElementById('level').innerText = LEVELS[LEVEL - 1];
 		var status = document.getElementById('status');
 		var playBtn = document.getElementById('play');
+
 		if(levelFinished){
 			status.innerText = STATUS_LIST['completed'] + " " + LEVELS[LEVEL - 2];
+			playBtn.innerText = 'Play';
 			levelFinished = false;
 		}else{
 			status.innerText = STATUS_LIST['collision'];
@@ -486,13 +529,15 @@ function intro(): void{
 		document.getElementById('status').removeAttribute('style');
 	}
 	canvas.setAttribute('style', 'background: rgba(0, 0, 0, 0.87);');
-	Mountain.createMountains(0, [100, 200], [canvas.height/4.5, canvas.height/1.5], canvas.height/2, 40);
+	Mountain.createMountains(0, [100, 200], [canvas.height/20, canvas.height/2], canvas.height/2, 40);
 }
 
 intro();
 
 /* GAME START */
 document.getElementById('play').addEventListener('click', function(){
+	//gameStarted = true;
+
 	document.getElementById('Info').setAttribute('style', 'display: none;');
 	c.clearRect(0, 0, innerWidth, innerHeight); // clear canvas
 	canvas.setAttribute('style', 'background: rgba(33, 33, 33, 0.91)');//#D9D9D9
@@ -504,29 +549,29 @@ document.getElementById('play').addEventListener('click', function(){
 	scoreSpan.textContent = String(score);
 
 	var obstacleObjects = [];
-	var nObjects = 10;
+	var nObjects = 50;
 	var offset = canvas.width/2;
 	var endObjects = [];
 	var stars: Circle[] = [];
+	Circle.drawCircles(100, stars);
 	if(LEVEL == 1){
-		Mountain.createMountains(offset, [100, 200], [canvas.height/4.5, canvas.height/1.5], canvas.height/2, nObjects, obstacleObjects);
-		var lastMountain: Mountain = obstacleObjects[nObjects*2 - 1];
+		Mountain.createMountains(offset, [100, 200], [canvas.height/20, canvas.height/1.5], canvas.height/2, nObjects, obstacleObjects);
+		var lastMountain: Mountain = obstacleObjects[obstacleObjects.length - 1];
 		var endX = lastMountain.x + canvas.width/5, endHeight = canvas.height/2.5, endBase = canvas.width/10;
 		endObjects[0] = new Mountain(c, endX, 0, endBase, -endHeight, -3, false, true);
 		endObjects[1] = new Mountain(c, endX, canvas.height, endBase, endHeight, -3, false, true);
-		Circle.drawCircles(100, stars);
 	} else if(LEVEL == 2){
-		Tower.createTowers(offset, nObjects, obstacleObjects);
-		var lastTower: Tower = obstacleObjects[nObjects*2 - 1];
+		Tower.createTowers(offset, [50, 70], [canvas.height/20, canvas.height/1.5], canvas.width/5, canvas.height/2, nObjects, obstacleObjects);
+		var lastTower: Tower = obstacleObjects[obstacleObjects.length - 1];
 		var endX = lastTower.x + canvas.width/2, endHeight = canvas.height/2.5, endWidth = canvas.width/20;
-		endObjects[0] = new Tower(c, endX, 0, endWidth, endHeight, -3, true);
-		endObjects[1] = new Tower(c, endX, canvas.height, endWidth, -endHeight, -3, true);
+		endObjects[0] = new Tower(c, endX, 0, endWidth, -endHeight, -3, false, true);
+		endObjects[1] = new Tower(c, endX, canvas.height, endWidth, endHeight, -3, false, true);
 	} else if (LEVEL == 3){
-		Mountain.createGrowingMountains(offset, nObjects, obstacleObjects);
-		var lastMountain: Mountain = obstacleObjects[nObjects*2 - 1];
+		Mountain.createMountains(offset, [100, 200], [canvas.height/20, canvas.height/1.5], canvas.height/2, nObjects, obstacleObjects, true);
+		var lastMountain: Mountain = obstacleObjects[obstacleObjects.length - 1];
 		var endX = lastMountain.x + canvas.width/5, endHeight = canvas.height/2.5, endBase = canvas.width/10;
-		endObjects[0] = new Mountain(c, endX, 0, endBase, -endHeight, -3, true);
-		endObjects[1] = new Mountain(c, endX, canvas.height, endBase, endHeight, -3, true);
+		endObjects[0] = new Mountain(c, endX, 0, endBase, -endHeight, -3, false, true);
+		endObjects[1] = new Mountain(c, endX, canvas.height, endBase, endHeight, -3, false, true);
 	}
 
 	var ball = new Ball(c, canvas.width/3, canvas.height/2, 0, 0, 10);
@@ -534,12 +579,11 @@ document.getElementById('play').addEventListener('click', function(){
 	var frames = 0;
 	function animate(): void{
 		var animation = requestAnimationFrame(animate);
-        
         if(gameStarted || frames == 0){
 			c.clearRect(0, 0, innerWidth, innerHeight); // clear canvas
 
             for(var i = 0; i < obstacleObjects.length; i++){
-                if(ball.isCollided(obstacleObjects[i])){
+                if(obstacleObjects[i].isCollided(ball)){
                     cancelAnimationFrame(animation);
 					gameStarted = false;
                     intro();
@@ -547,7 +591,7 @@ document.getElementById('play').addEventListener('click', function(){
                 }
 			}
 			for(var i = 0; i < endObjects.length; i++){
-                if(ball.isCollided(endObjects[i])){
+                if(endObjects[i].isCollided(ball)){
                     cancelAnimationFrame(animation);
 					gameStarted = false;
                     intro();
@@ -555,7 +599,7 @@ document.getElementById('play').addEventListener('click', function(){
                 }
 			}
 
-			if(ball.getX() >= endObjects[0].x){
+			if(ball.x >= endObjects[0].x){
 				cancelAnimationFrame(animation);
 				gameStarted = false;
 				levelFinished = true;

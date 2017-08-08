@@ -90,19 +90,30 @@ var Circle = (function () {
     };
     return Circle;
 }());
-var Ball = (function () {
-    function Ball(c, x, y, dx, dy, radius) {
+var Polygon = (function () {
+    function Polygon(c, x, y, sideLength, nSides) {
         this.c = c;
         this.x = x;
         this.y = y;
+        this.sideLength = sideLength;
+        this.nSides = nSides;
+    }
+    Polygon.prototype.draw = function () {
+        this.c.beginPath();
+        this.c.moveTo(this.x, this.y);
+    };
+    return Polygon;
+}());
+var Ball = (function () {
+    function Ball(c, x, y, dx, dy, radius) {
+        this.c = c;
         this.dx = dx;
         this.dy = dy;
+        this.x = x;
+        this.y = y;
         this.radius = radius;
-        this.color = 'black';
+        this.color = '#D9D9D9S';
     }
-    Ball.prototype.getX = function () {
-        return this.x;
-    };
     Ball.prototype.draw = function () {
         this.c.beginPath();
         this.c.arc(this.x, this.y, this.radius, 0, 2 * Math.PI, false);
@@ -124,77 +135,6 @@ var Ball = (function () {
         this.x += this.dx;
         this.y += this.dy;
     };
-    Ball.prototype.pointCircleCollide = function (point, circle, r) {
-        if (r === 0)
-            return false;
-        var dx = circle[0] - point[0];
-        var dy = circle[1] - point[1];
-        return dx * dx + dy * dy <= r * r;
-    };
-    Ball.prototype.lineCircleCollide = function (a, b, circle, radius, nearest) {
-        if (nearest === void 0) { nearest = null; }
-        var tmp = [0, 0];
-        //check to see if start or end points lie within circle 
-        if (this.pointCircleCollide(a, circle, radius)) {
-            if (nearest) {
-                nearest[0] = a[0];
-                nearest[1] = a[1];
-            }
-            return true;
-        }
-        if (this.pointCircleCollide(b, circle, radius)) {
-            if (nearest) {
-                nearest[0] = b[0];
-                nearest[1] = b[1];
-            }
-            return true;
-        }
-        var x1 = a[0], y1 = a[1], x2 = b[0], y2 = b[1];
-        var cx = circle[0], cy = circle[1];
-        //vector d
-        var dx = x2 - x1;
-        var dy = y2 - y1;
-        //vector lc
-        var lcx = cx - x1;
-        var lcy = cy - y1;
-        //project lc onto d, resulting in vector p
-        var dLen2 = dx * dx + dy * dy; //len2 of d
-        var px = dx;
-        var py = dy;
-        if (dLen2 > 0) {
-            var dp = (lcx * dx + lcy * dy) / dLen2;
-            px *= dp;
-            py *= dp;
-        }
-        if (!nearest)
-            nearest = tmp;
-        nearest[0] = x1 + px;
-        nearest[1] = y1 + py;
-        //len2 of p
-        var pLen2 = px * px + py * py;
-        //check collision
-        return this.pointCircleCollide(nearest, circle, radius)
-            && pLen2 <= dLen2 && (px * dx + py * dy) >= 0;
-    };
-    Ball.prototype.pointInTriangle = function (point, triangle) {
-        //compute vectors & dot products
-        var cx = point[0], cy = point[1], t0 = triangle[0], t1 = triangle[1], t2 = triangle[2], v0x = t2[0] - t0[0], v0y = t2[1] - t0[1], v1x = t1[0] - t0[0], v1y = t1[1] - t0[1], v2x = cx - t0[0], v2y = cy - t0[1], dot00 = v0x * v0x + v0y * v0y, dot01 = v0x * v1x + v0y * v1y, dot02 = v0x * v2x + v0y * v2y, dot11 = v1x * v1x + v1y * v1y, dot12 = v1x * v2x + v1y * v2y;
-        // Compute barycentric coordinates
-        var b = (dot00 * dot11 - dot01 * dot01), inv = b === 0 ? 0 : (1 / b), u = (dot11 * dot02 - dot01 * dot12) * inv, v = (dot00 * dot12 - dot01 * dot02) * inv;
-        return u >= 0 && v >= 0 && (u + v < 1);
-    };
-    Ball.prototype.isCollided = function (mountain) {
-        var circle = [this.x, this.y], triangle = mountain.getTriCoord(), radius = this.radius;
-        if (this.pointInTriangle(circle, triangle))
-            return true;
-        if (this.lineCircleCollide(triangle[0], triangle[1], circle, radius))
-            return true;
-        if (this.lineCircleCollide(triangle[1], triangle[2], circle, radius))
-            return true;
-        if (this.lineCircleCollide(triangle[2], triangle[0], circle, radius))
-            return true;
-        return false;
-    };
     Ball.g = 0.5;
     return Ball;
 }());
@@ -204,16 +144,6 @@ var ObstacleObject = (function () {
     ObstacleObject.prototype.draw = function () {
     };
     ObstacleObject.prototype.update = function () {
-    };
-    ObstacleObject.prototype.createObstacleObjects = function () {
-        var nObjects = 100;
-        var offset = 5;
-        if (LEVEL == 1) {
-            return Mountain.createMountains(offset, nObjects, []);
-        }
-        else if (LEVEL == 2) {
-            return Tower.createTowers(offset, nObjects, []);
-        }
     };
     return ObstacleObject;
 }());
@@ -267,8 +197,80 @@ var Mountain = (function (_super) {
         var v3 = [this.x + this.base / 2, this.y];
         return [v1, v2, v3];
     };
-    Mountain.addMountain = function (x, y, base, height, grow, mountains) {
+    Mountain.prototype.pointCircleCollide = function (point, circle, r) {
+        if (r === 0)
+            return false;
+        var dx = circle[0] - point[0];
+        var dy = circle[1] - point[1];
+        return dx * dx + dy * dy <= r * r;
+    };
+    Mountain.prototype.lineCircleCollide = function (a, b, circle, radius, nearest) {
+        if (nearest === void 0) { nearest = null; }
+        var tmp = [0, 0];
+        //check to see if start or end points lie within circle 
+        if (this.pointCircleCollide(a, circle, radius)) {
+            if (nearest) {
+                nearest[0] = a[0];
+                nearest[1] = a[1];
+            }
+            return true;
+        }
+        if (this.pointCircleCollide(b, circle, radius)) {
+            if (nearest) {
+                nearest[0] = b[0];
+                nearest[1] = b[1];
+            }
+            return true;
+        }
+        var x1 = a[0], y1 = a[1], x2 = b[0], y2 = b[1];
+        var cx = circle[0], cy = circle[1];
+        //vector d
+        var dx = x2 - x1;
+        var dy = y2 - y1;
+        //vector lc
+        var lcx = cx - x1;
+        var lcy = cy - y1;
+        //project lc onto d, resulting in vector p
+        var dLen2 = dx * dx + dy * dy; //len2 of d
+        var px = dx;
+        var py = dy;
+        if (dLen2 > 0) {
+            var dp = (lcx * dx + lcy * dy) / dLen2;
+            px *= dp;
+            py *= dp;
+        }
+        if (!nearest)
+            nearest = tmp;
+        nearest[0] = x1 + px;
+        nearest[1] = y1 + py;
+        //len2 of p
+        var pLen2 = px * px + py * py;
+        //check collision
+        return this.pointCircleCollide(nearest, circle, radius)
+            && pLen2 <= dLen2 && (px * dx + py * dy) >= 0;
+    };
+    Mountain.prototype.pointInTriangle = function (point, triangle) {
+        //compute vectors & dot products
+        var cx = point[0], cy = point[1], t0 = triangle[0], t1 = triangle[1], t2 = triangle[2], v0x = t2[0] - t0[0], v0y = t2[1] - t0[1], v1x = t1[0] - t0[0], v1y = t1[1] - t0[1], v2x = cx - t0[0], v2y = cy - t0[1], dot00 = v0x * v0x + v0y * v0y, dot01 = v0x * v1x + v0y * v1y, dot02 = v0x * v2x + v0y * v2y, dot11 = v1x * v1x + v1y * v1y, dot12 = v1x * v2x + v1y * v2y;
+        // Compute barycentric coordinates
+        var b = (dot00 * dot11 - dot01 * dot01), inv = b === 0 ? 0 : (1 / b), u = (dot11 * dot02 - dot01 * dot12) * inv, v = (dot00 * dot12 - dot01 * dot02) * inv;
+        return u >= 0 && v >= 0 && (u + v < 1);
+    };
+    Mountain.prototype.isCollided = function (ball) {
+        var circle = [ball.x, ball.y], radius = ball.radius, triangle = this.getTriCoord();
+        if (this.pointInTriangle(circle, triangle))
+            return true;
+        if (this.lineCircleCollide(triangle[0], triangle[1], circle, radius))
+            return true;
+        if (this.lineCircleCollide(triangle[1], triangle[2], circle, radius))
+            return true;
+        if (this.lineCircleCollide(triangle[2], triangle[0], circle, radius))
+            return true;
+        return false;
+    };
+    Mountain.addMountain = function (x, y, base, height, mountains, grow) {
         if (mountains === void 0) { mountains = null; }
+        if (grow === void 0) { grow = false; }
         if (mountains) {
             mountains.push(new Mountain(c, x, y, base, height, -3, grow));
         }
@@ -277,39 +279,22 @@ var Mountain = (function (_super) {
             m.update();
         }
     };
-    Mountain.createMountains = function (offset, rangeX, rangeY, spacingY, nMountains, mountains) {
+    Mountain.createMountains = function (offset, rangeX, rangeY, spacingY, nMountains, mountains, grow) {
         if (mountains === void 0) { mountains = null; }
+        if (grow === void 0) { grow = false; }
         var x = mountains ? offset : 0, y = 0, base = randRangeInt(rangeX[0], rangeX[1]), height = 0, spacingX = base + randRangeInt(-50, 50);
         for (var i = 0; i < nMountains; i++) {
             // BOTTOM
             y = canvas.height;
-            height = randRangeInt(rangeY[0], rangeY[1]); //randRangeInt(canvas.height/4.5, canvas.height/1.5)
-            Mountain.addMountain(x, y, base, height, false, mountains);
+            height = randRangeInt(rangeY[0], rangeY[1]);
+            Mountain.addMountain(x, y, base, height, mountains, grow);
             // TOP
             y = 0;
             height = -(canvas.height - height - spacingY);
-            Mountain.addMountain(x, y, base, height, false, mountains);
+            Mountain.addMountain(x, y, base, height, mountains, grow);
             x += spacingX;
-            base = randRangeInt(rangeX[0], rangeX[1]); //randRangeInt(100, 200);
+            base = randRangeInt(rangeX[0], rangeX[1]);
             spacingX = base + randRangeInt(-50, 50);
-        }
-        return mountains;
-    };
-    Mountain.createGrowingMountains = function (offset, nMountains, mountains) {
-        if (mountains === void 0) { mountains = null; }
-        var x = canvas.width / 2;
-        var base = randRangeInt(100, 170);
-        var mountainDist = canvas.height / 10;
-        for (var i = offset; i < nMountains + offset; i++) {
-            var y = 0;
-            var height = -randRangeInt(canvas.height / 1.5, canvas.height / 2.5);
-            Mountain.addMountain(x, y, base, height, true, mountains);
-            y = canvas.height;
-            height = canvas.height - height - mountainDist;
-            Mountain.addMountain(x, y, base, height, true, mountains);
-            base = randRangeInt(100, 170);
-            var towerSpacing = base + canvas.width / 4;
-            x += towerSpacing;
         }
         return mountains;
     };
@@ -318,7 +303,8 @@ var Mountain = (function (_super) {
 }(ObstacleObject));
 var Tower = (function (_super) {
     __extends(Tower, _super);
-    function Tower(c, x, y, width, height, dx, isEnd) {
+    function Tower(c, x, y, width, height, dx, grow, isEnd) {
+        if (grow === void 0) { grow = false; }
         if (isEnd === void 0) { isEnd = false; }
         var _this = _super.call(this) || this;
         _this.c = c;
@@ -327,8 +313,10 @@ var Tower = (function (_super) {
         _this.x = x;
         _this.y = y;
         _this.width = width;
-        _this.height = height;
+        _this.height = -Tower.scale * height;
+        _this.heightInitial = _this.height;
         _this.color = colors[randRangeInt(0, 3)];
+        _this.grow = grow;
         return _this;
     }
     Tower.prototype.draw = function () {
@@ -337,36 +325,52 @@ var Tower = (function (_super) {
     };
     Tower.prototype.update = function () {
         this.draw();
+        if (!this.isEnd && this.grow) {
+            if (Math.abs(this.height) >= Math.abs(this.heightInitial * 1.3) || Math.abs(this.height) <= Math.abs(this.heightInitial / 3)) {
+                this.growthRate *= -1;
+            }
+            this.height += this.growthRate;
+        }
         this.x += this.dx;
     };
-    Tower.addTower = function (x, y, width, height, towers) {
+    Tower.prototype.isCollided = function (ball) {
+        if (ball.x > this.x && ball.x < this.x + this.width) {
+            if (this.height < 0 && ball.y > this.y + this.height || this.height > 0 && ball.y < this.y + this.height) {
+                return true;
+            }
+        }
+        return false;
+    };
+    Tower.addTower = function (x, y, width, height, towers, grow) {
         if (towers === void 0) { towers = null; }
+        if (grow === void 0) { grow = false; }
         if (towers) {
-            towers.push(new Tower(c, x, y, width, height, -3));
+            towers.push(new Tower(c, x, y, width, height, -3, grow));
         }
         else {
             var m = new Tower(c, x, y, width, height, 0);
             m.update();
         }
     };
-    Tower.createTowers = function (offset, nTowers, towers) {
+    Tower.createTowers = function (offset, rangeX, rangeY, spacingX, spacingY, nTowers, towers, grow) {
         if (towers === void 0) { towers = null; }
-        var x = canvas.width / 2;
-        var width = randRangeInt(50, 70);
-        var towerDist = canvas.height / 10;
-        for (var i = offset; i < nTowers + offset; i++) {
-            var y = 0;
-            var height = randRangeInt(canvas.height / 1.5, canvas.height / 2.5);
-            Tower.addTower(x, y, width, height, towers);
+        if (grow === void 0) { grow = false; }
+        var x = towers ? offset : 0, y = 0, width = randRangeInt(rangeX[0], rangeX[1]), height = 0;
+        for (var i = 0; i < nTowers; i++) {
+            // BOTTOM
             y = canvas.height;
-            height = -(canvas.height - height - towerDist);
-            Tower.addTower(x, y, width, height, towers);
-            width = randRangeInt(50, 70);
-            var towerSpacing = width + canvas.width / 4; //randRangeInt(100, 150);
-            x += towerSpacing;
+            height = randRangeInt(rangeY[0], rangeY[1]);
+            Tower.addTower(x, y, width, height, towers, grow);
+            // TOP
+            y = 0;
+            height = -(canvas.height - height - spacingY);
+            Tower.addTower(x, y, width, height < 0 ? height : 0, towers, grow);
+            x += spacingX;
+            width = randRangeInt(rangeX[0], rangeX[1]);
         }
         return towers;
     };
+    Tower.scale = 1.1;
     return Tower;
 }(ObstacleObject));
 var LEVEL = 1;
@@ -390,6 +394,7 @@ function intro() {
         var playBtn = document.getElementById('play');
         if (levelFinished) {
             status.innerText = STATUS_LIST['completed'] + " " + LEVELS[LEVEL - 2];
+            playBtn.innerText = 'Play';
             levelFinished = false;
         }
         else {
@@ -399,11 +404,12 @@ function intro() {
         document.getElementById('status').removeAttribute('style');
     }
     canvas.setAttribute('style', 'background: rgba(0, 0, 0, 0.87);');
-    Mountain.createMountains(0, [100, 200], [canvas.height / 4.5, canvas.height / 1.5], canvas.height / 2, 40);
+    Mountain.createMountains(0, [100, 200], [canvas.height / 20, canvas.height / 2], canvas.height / 2, 40);
 }
 intro();
 /* GAME START */
 document.getElementById('play').addEventListener('click', function () {
+    //gameStarted = true;
     document.getElementById('Info').setAttribute('style', 'display: none;');
     c.clearRect(0, 0, innerWidth, innerHeight); // clear canvas
     canvas.setAttribute('style', 'background: rgba(33, 33, 33, 0.91)'); //#D9D9D9
@@ -412,31 +418,31 @@ document.getElementById('play').addEventListener('click', function () {
     score = 0;
     scoreSpan.textContent = String(score);
     var obstacleObjects = [];
-    var nObjects = 10;
+    var nObjects = 50;
     var offset = canvas.width / 2;
     var endObjects = [];
     var stars = [];
+    Circle.drawCircles(100, stars);
     if (LEVEL == 1) {
-        Mountain.createMountains(offset, [100, 200], [canvas.height / 4.5, canvas.height / 1.5], canvas.height / 2, nObjects, obstacleObjects);
-        var lastMountain = obstacleObjects[nObjects * 2 - 1];
+        Mountain.createMountains(offset, [100, 200], [canvas.height / 20, canvas.height / 1.5], canvas.height / 2, nObjects, obstacleObjects);
+        var lastMountain = obstacleObjects[obstacleObjects.length - 1];
         var endX = lastMountain.x + canvas.width / 5, endHeight = canvas.height / 2.5, endBase = canvas.width / 10;
         endObjects[0] = new Mountain(c, endX, 0, endBase, -endHeight, -3, false, true);
         endObjects[1] = new Mountain(c, endX, canvas.height, endBase, endHeight, -3, false, true);
-        Circle.drawCircles(100, stars);
     }
     else if (LEVEL == 2) {
-        Tower.createTowers(offset, nObjects, obstacleObjects);
-        var lastTower = obstacleObjects[nObjects * 2 - 1];
+        Tower.createTowers(offset, [50, 70], [canvas.height / 20, canvas.height / 1.5], canvas.width / 5, canvas.height / 2, nObjects, obstacleObjects);
+        var lastTower = obstacleObjects[obstacleObjects.length - 1];
         var endX = lastTower.x + canvas.width / 2, endHeight = canvas.height / 2.5, endWidth = canvas.width / 20;
-        endObjects[0] = new Tower(c, endX, 0, endWidth, endHeight, -3, true);
-        endObjects[1] = new Tower(c, endX, canvas.height, endWidth, -endHeight, -3, true);
+        endObjects[0] = new Tower(c, endX, 0, endWidth, -endHeight, -3, false, true);
+        endObjects[1] = new Tower(c, endX, canvas.height, endWidth, endHeight, -3, false, true);
     }
     else if (LEVEL == 3) {
-        Mountain.createGrowingMountains(offset, nObjects, obstacleObjects);
-        var lastMountain = obstacleObjects[nObjects * 2 - 1];
+        Mountain.createMountains(offset, [100, 200], [canvas.height / 20, canvas.height / 1.5], canvas.height / 2, nObjects, obstacleObjects, true);
+        var lastMountain = obstacleObjects[obstacleObjects.length - 1];
         var endX = lastMountain.x + canvas.width / 5, endHeight = canvas.height / 2.5, endBase = canvas.width / 10;
-        endObjects[0] = new Mountain(c, endX, 0, endBase, -endHeight, -3, true);
-        endObjects[1] = new Mountain(c, endX, canvas.height, endBase, endHeight, -3, true);
+        endObjects[0] = new Mountain(c, endX, 0, endBase, -endHeight, -3, false, true);
+        endObjects[1] = new Mountain(c, endX, canvas.height, endBase, endHeight, -3, false, true);
     }
     var ball = new Ball(c, canvas.width / 3, canvas.height / 2, 0, 0, 10);
     var frames = 0;
@@ -445,7 +451,7 @@ document.getElementById('play').addEventListener('click', function () {
         if (gameStarted || frames == 0) {
             c.clearRect(0, 0, innerWidth, innerHeight); // clear canvas
             for (var i = 0; i < obstacleObjects.length; i++) {
-                if (ball.isCollided(obstacleObjects[i])) {
+                if (obstacleObjects[i].isCollided(ball)) {
                     cancelAnimationFrame(animation);
                     gameStarted = false;
                     intro();
@@ -453,14 +459,14 @@ document.getElementById('play').addEventListener('click', function () {
                 }
             }
             for (var i = 0; i < endObjects.length; i++) {
-                if (ball.isCollided(endObjects[i])) {
+                if (endObjects[i].isCollided(ball)) {
                     cancelAnimationFrame(animation);
                     gameStarted = false;
                     intro();
                     return;
                 }
             }
-            if (ball.getX() >= endObjects[0].x) {
+            if (ball.x >= endObjects[0].x) {
                 cancelAnimationFrame(animation);
                 gameStarted = false;
                 levelFinished = true;
