@@ -389,11 +389,12 @@ function intro() {
     var info = document.getElementById('Info');
     if (info.hasAttribute('style')) {
         info.removeAttribute('style');
-        document.getElementById('level').innerText = LEVELS[LEVEL - 1];
+        // document.getElementById('level').innerText = LEVELS[LEVEL - 1];
         var status = document.getElementById('status');
         var playBtn = document.getElementById('play');
         if (levelFinished) {
             status.innerText = STATUS_LIST['completed'] + " " + LEVELS[LEVEL - 2];
+            LEVEL = LEVEL > 3 ? 1 : LEVEL;
             playBtn.innerText = 'Play';
             levelFinished = false;
         }
@@ -401,6 +402,7 @@ function intro() {
             status.innerText = STATUS_LIST['collision'];
             playBtn.innerText = 'Replay';
         }
+        document.getElementById('level').innerText = LEVELS[LEVEL - 1];
         document.getElementById('status').removeAttribute('style');
     }
     canvas.setAttribute('style', 'background: rgba(0, 0, 0, 0.87);');
